@@ -9,6 +9,7 @@ from . import (
     maintenance,
     project_type,
     security,
+    vulnerabilities,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "maintenance",
     "project_type",
     "security",
+    "vulnerabilities",
 ]

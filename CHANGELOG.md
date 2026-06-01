@@ -2,14 +2,14 @@
 
 All notable changes to `repoc` are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.0] - 2026-06-01
 
 First stable release.
 
 ### Added
+
 - **Ephemeral private-repo auth.** `--login` runs GitHub's OAuth device-code
   flow (one-time browser code) and `--token-stdin` reads a token from stdin.
   No credential is ever written to disk, a keyring, or config — tokens live in
@@ -52,10 +52,18 @@ First stable release.
   method calls, Python `yaml.load` tolerates a multi-line `SafeLoader`, and the
   GitHub Actions script-injection rule is scoped to genuinely untrusted
   `github.event.*` fields (no longer flags `repository.name`).
+- **Dependency vulnerability check (`--check-deps`)**: parses pinned versions
+  from `requirements.txt`, `poetry.lock`, `Pipfile.lock`, `package-lock.json`,
+  `Gemfile.lock`, `Cargo.lock`, `composer.lock`, and `go.mod`, and batch-queries
+  OSV.dev. Findings are capped at `HIGH` (never escalate the repo to Critical on
+  a transitive vuln) and a failed lookup degrades to an informational note.
+- **SARIF output (`--format sarif`)**: emit SARIF 2.1.0 so findings flow into
+  GitHub code scanning / the Security tab and other CI dashboards.
 - Heuristic LICENSE detection for local repositories (`--local`).
 - Dependabot configuration; README badges; `SECURITY.md`, `CONTRIBUTING.md`.
 
 ### Changed
+
 - **Comment/string-aware scanning.** Code-pattern rules now run against a
   comment- and string-masked copy of each file, eliminating the bulk of false
   positives (e.g. `eval(` inside a docstring or a commented example line).
@@ -77,6 +85,7 @@ First stable release.
 - Bumped `Development Status` classifier to `5 - Production/Stable`.
 
 ### Fixed
+
 - **Symlink traversal in `--local` scans.** The local walker no longer follows
   symlinks and confines reads to the target directory, so a crafted repo can't
   make repoc read files outside it (e.g. via a symlink to your home dir).

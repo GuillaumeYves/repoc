@@ -1,6 +1,6 @@
 """Output renderers for AnalysisResult."""
 
 from . import json as json_renderer
-from . import markdown, terminal
+from . import markdown, sarif, terminal
 
-__all__ = ["json_renderer", "markdown", "terminal"]
+__all__ = ["json_renderer", "markdown", "sarif", "terminal"]

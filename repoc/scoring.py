@@ -36,10 +36,21 @@ _LIGHT = {
     Severity.HIGH: 6,
     Severity.CRITICAL: 10,
 }
+# Dependency vulnerabilities sit between the two: a real, named CVE matters, but
+# it is often transitive / not necessarily reachable, so it weighs less than a
+# committed secret.
+_DEPENDENCY = {
+    Severity.INFO: 0,
+    Severity.LOW: 3,
+    Severity.MEDIUM: 8,
+    Severity.HIGH: 15,
+    Severity.CRITICAL: 25,
+}
 _PENALTIES: dict[str, dict[Severity, int]] = {
     "secret": _HEAVY,
     "install_hook": _HEAVY,
     "code_pattern": _LIGHT,
+    "dependency": _DEPENDENCY,
 }
 
 # Categories that should *not* count toward the security score at all — they are

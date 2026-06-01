@@ -22,6 +22,7 @@ from .analyzers import (
     maintenance,
     project_type,
     security,
+    vulnerabilities,
 )
 from .auth import AuthError, device_login, read_token_from_stdin
 from .github_client import GitHubClient, GitHubError, RateLimitError
@@ -37,6 +38,7 @@ from .models import (
 )
 from .renderers import json as json_renderer
 from .renderers import markdown as markdown_renderer
+from .renderers import sarif as sarif_renderer
 from .renderers import terminal as terminal_renderer
 from .scoring import (
     build_recommendations,
@@ -80,6 +82,7 @@ class OutputFormat(StrEnum):
     TERMINAL = "terminal"
     MARKDOWN = "markdown"
     JSON = "json"
+    SARIF = "sarif"
 
 
 class FailOn(StrEnum):
@@ -92,7 +95,7 @@ class FailOn(StrEnum):
 
 # Categories that count toward a CI gate. Maintenance/documentation/coverage
 # findings are informational and never fail a --fail-on gate.
-_GATE_CATEGORIES = {"secret", "install_hook", "code_pattern"}
+_GATE_CATEGORIES = {"secret", "install_hook", "code_pattern", "dependency"}
 
 
 # Curated list of paths we always try to fetch when inspecting a remote repo.
@@ -156,6 +159,11 @@ def inspect(
         None, "--output", "-o", help="Write report to this file instead of stdout."
     ),
     deep: bool = typer.Option(False, "--deep", help="Inspect a wider set of files (slower)."),
+    check_deps: bool = typer.Option(
+        False,
+        "--check-deps",
+        help="Look up pinned dependency versions against the OSV.dev vulnerability database.",
+    ),
     no_network: bool = typer.Option(False, "--no-network", help="Skip all GitHub API calls."),
     max_files: int = typer.Option(500, "--max-files", help="Maximum number of files to load."),
     max_file_size: int = typer.Option(200_000, "--max-file-size", help="Maximum file size in bytes."),
@@ -200,6 +208,7 @@ def inspect(
         result = run_analysis(
             parsed_target,
             deep=deep,
+            check_deps=check_deps,
             no_network=no_network,
             max_files=max_files,
             max_file_size=max_file_size,
@@ -303,6 +312,7 @@ def run_analysis(
     target: Target,
     *,
     deep: bool = False,
+    check_deps: bool = False,
     no_network: bool = False,
     max_files: int = 500,
     max_file_size: int = 200_000,
@@ -366,6 +376,8 @@ def run_analysis(
     doc_score, doc_findings = documentation.analyze_documentation(files)
     findings.extend(doc_findings)
     findings.extend(coverage_analyzer.coverage_findings(coverage))
+    if check_deps and not no_network:
+        findings.extend(vulnerabilities.analyze_dependencies(files))
 
     # security_score ignores maintenance/documentation findings internally.
     sec_score = security_score(findings)
@@ -471,6 +483,8 @@ def _build_verdict(
 def _write_output(result: AnalysisResult, *, format: OutputFormat, output: Path | None) -> None:
     if format == OutputFormat.JSON:
         body = json_renderer.render(result)
+    elif format == OutputFormat.SARIF:
+        body = sarif_renderer.render(result)
     elif format == OutputFormat.MARKDOWN:
         body = markdown_renderer.render(result)
     else:  # terminal

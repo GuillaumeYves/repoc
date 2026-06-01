@@ -1,8 +1,8 @@
 # repoc
 
 [![CI](https://github.com/GuillaumeYves/repoc/actions/workflows/ci.yml/badge.svg)](https://github.com/GuillaumeYves/repoc/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/repoc.svg)](https://pypi.org/project/repoc/)
-[![Python versions](https://img.shields.io/pypi/pyversions/repoc.svg)](https://pypi.org/project/repoc/)
+[![PyPI version](https://img.shields.io/pypi/v/repoc-cli.svg)](https://pypi.org/project/repoc-cli/)
+[![Python versions](https://img.shields.io/pypi/pyversions/repoc-cli.svg)](https://pypi.org/project/repoc-cli/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 **`repoc` = repo doctor.** A lightweight CLI that inspects a GitHub or local
@@ -25,8 +25,10 @@ It answers questions like:
 ## Installation
 
 ```bash
-pip install repoc
+pip install repoc-cli
 ```
+
+The PyPI package is `repoc-cli`; the command it installs is `repoc`.
 
 Or from source:
 
@@ -61,6 +63,12 @@ repoc inspect owner/repo --format markdown --output report.md
 # Deeper scan — also inspects source files, not just manifests
 repoc inspect owner/repo --deep
 
+# Check pinned dependency versions against the OSV.dev vulnerability database
+repoc inspect owner/repo --check-deps
+
+# SARIF for GitHub code scanning
+repoc inspect owner/repo --format sarif --output repoc.sarif
+
 # Use as a CI gate — exit non-zero if a HIGH (or worse) security finding appears
 repoc inspect owner/repo --fail-on high
 ```
@@ -70,9 +78,10 @@ repoc inspect owner/repo --fail-on high
 | Option                          | Description                                                              |
 | ------------------------------- | ------------------------------------------------------------------------ |
 | `--local`                       | Force the target to be interpreted as a local path.                      |
-| `--format terminal\|markdown\|json` | Output format. Default `terminal`.                                  |
+| `--format terminal\|markdown\|json\|sarif` | Output format. Default `terminal`. `sarif` for GitHub code scanning. |
 | `--output <path>`               | Write the report to a file.                                              |
 | `--deep`                        | Inspect a wider set of source files (downloads a single repo tarball).   |
+| `--check-deps`                  | Look up pinned dependency versions against OSV.dev (network).            |
 | `--no-network`                  | Skip GitHub API calls (local mode only).                                 |
 | `--max-files N`                 | Cap on how many files to load. Default `500`.                            |
 | `--max-file-size N`             | Skip files bigger than N bytes. Default `200000`.                        |
@@ -177,6 +186,15 @@ future releases — today a risky call in a `.go`/`.java`/`.rs` file is not flag
 Regex-based and conservative: GitHub PATs, AWS access keys, PEM private keys,
 JWTs, DB URLs with credentials, Slack/Discord webhooks, Stripe secret keys,
 committed `.env` files. Matched values are redacted.
+
+### Dependency vulnerabilities (`--check-deps`)
+
+Opt-in. repoc parses *pinned* versions from lockfiles (`requirements.txt`,
+`poetry.lock`, `Pipfile.lock`, `package-lock.json`, `Gemfile.lock`, `Cargo.lock`,
+`composer.lock`, `go.mod`) and batch-queries [OSV.dev](https://osv.dev) for known
+advisories. Findings are capped at `HIGH` severity — repoc can't assess whether a
+(possibly transitive) vuln is reachable, so it never escalates a whole repo to
+`Critical` on a dependency alone. Needs network; skipped under `--no-network`.
 
 ### Keeping signal high
 
@@ -285,9 +303,8 @@ to PyPI via Trusted Publishing.
 
 - **Code-logic rule packs for Go, Rust, Java, and C#** — the languages repoc
   identifies today but doesn't yet analyze for risky calls.
-- Optional OSV.dev integration for dependency vulnerabilities.
 - Heuristics for typosquat detection on package names.
-- SARIF output for CI integrations.
+- Resolve `--check-deps` for range-only manifests (e.g. a bare `package.json`).
 - Pluggable rule packs (drop-in `.toml`/`.py` rules).
 - Caching layer for repeated GitHub queries.
 
